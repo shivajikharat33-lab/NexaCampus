@@ -1,0 +1,7 @@
+.env
+logs/
+__pycache__/
+*.pyc
+uploads/
+yolov8n.pt
+*.pt

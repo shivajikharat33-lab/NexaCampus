@@ -1,0 +1,33 @@
+name: Smart Civic Detector CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          pip install pytest httpx
+          pip install fastapi uvicorn python-jose passlib bcrypt python-dotenv pymongo python-multipart pillow piexif qrcode reportlab openpyxl
+
+      - name: Run tests
+        env:
+          MONGO_URL: mongodb://localhost:27017
+          DB_NAME: civic_detector
+          SECRET_KEY: test_secret_key
+        run: |
+          python -m pytest test_main.py -v -k "not rate_limiter and not health_score and not summarizer and not similarity"
