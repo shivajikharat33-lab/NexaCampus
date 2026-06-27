@@ -17,7 +17,7 @@ from logging.handlers import RotatingFileHandler
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-
+from routes.feed import router as feed_router
 from categories import ALLOWED_CATEGORIES
 from password_utils import hash_password, verify_password
 from database import complaints, users, db
@@ -29,6 +29,7 @@ from ai.auto_router import auto_assign_department
 from fastapi import WebSocket, WebSocketDisconnect
 from typing import Dict
 from whatsapp import notify_complaint_submitted, notify_status_changed, notify_resolved, notify_escalated
+
 load_dotenv()
 
 # ══════════════════════════════════════════════════════════════════
@@ -1124,3 +1125,4 @@ async def websocket_endpoint(
 # ══════════════════════════════════════════════════════════════════
 logger.info("Smart College Civic Detector v3.0 started")
 app.include_router(router)
+app.include_router(feed_router)
