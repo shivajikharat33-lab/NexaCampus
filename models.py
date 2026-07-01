@@ -8,10 +8,19 @@ class RegisterModel(BaseModel):
     name: str
     email: EmailStr
     password: str
+    college_name: str
     student_id: Optional[str] = None
     department: Optional[str] = None
     year: Optional[str] = None
     phone: Optional[str] = None
+
+    @field_validator("college_name")
+    @classmethod
+    def college_valid(cls, v):
+        v = v.strip()
+        if len(v) < 2:
+            raise ValueError("College name required")
+        return v
 
     @field_validator("name")
     @classmethod
