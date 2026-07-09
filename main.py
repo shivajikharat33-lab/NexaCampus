@@ -2279,3 +2279,7 @@ app.include_router(feed_router)
 app.include_router(chatbot_router)
 
 app.include_router(voice_router)
+if __name__ == "__main__":
+    import uvicorn
+    import os
+    uvicorn.run(app, host="0.0.0.0", port=int(os.getenv("PORT", 8000)))
