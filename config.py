@@ -11,8 +11,8 @@ ACCESS_TOKEN_EXPIRE   = int(os.getenv("ACCESS_TOKEN_EXPIRE_HOURS", 24))
 REFRESH_TOKEN_EXPIRE  = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", 7))
 
 # ── MongoDB ───────────────────────────────────────────────────────
-MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/")DB_NAME   = os.getenv("DB_NAME", "civic_detector")
-
+MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/")
+DB_NAME   = os.getenv("DB_NAME", "civic_detector")
 # ── Upload ────────────────────────────────────────────────────────
 UPLOAD_FOLDER      = os.getenv("UPLOAD_FOLDER", "uploads")
 MAX_FILE_SIZE_MB   = int(os.getenv("MAX_FILE_SIZE_MB", 5))
