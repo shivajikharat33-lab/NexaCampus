@@ -1,28 +1,28 @@
 # routes/chatbot.py
 
+# routes/chatbot.py
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from datetime import datetime
-import requests, re
+import re, os
 
 from database import db, complaints
 from auth_middleware import get_current_user
-from config import GEMINI_API_KEY
 from logger import logger
 
 router = APIRouter(prefix="/api/v1/chatbot", tags=["Chatbot"])
 
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 class ChatRequest(BaseModel):
     message: str
-
 
 class ChatResponse(BaseModel):
     reply: str
     intent: str
     complaint_created: bool = False
     complaint_id: str | None = None
-
 
 INTENTS = {
     "track_complaint": [
@@ -44,7 +44,6 @@ INTENTS = {
     ],
 }
 
-
 def detect_intent(message: str) -> str:
     msg = message.lower()
     for intent, patterns in INTENTS.items():
@@ -52,32 +51,28 @@ def detect_intent(message: str) -> str:
             return intent
     return "general"
 
-
-# ✅ FIXED: Using direct REST API instead of google.genai library
-def gemini(prompt: str) -> str:
-    if not GEMINI_API_KEY:
-        return "AI is not configured. Please set GEMINI_API_KEY in .env"
+def groq_chat(prompt: str) -> str:
+    if not GROQ_API_KEY:
+        return "AI is not configured. Please set GROQ_API_KEY in .env"
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"maxOutputTokens": 500, "temperature": 0.7}
-        }
-        response = requests.post(url, json=payload, timeout=10)
-        response.raise_for_status()
-        data = response.json()
-        return data["candidates"][0]["content"]["parts"][0]["text"].strip()
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+        completion = client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=500,
+            temperature=0.7,
+        )
+        return completion.choices[0].message.content.strip()
     except Exception as e:
-        logger.error(f"Gemini API error: {e}")
+        logger.error(f"Groq API error: {e}")
         return "I'm having trouble connecting to AI. Please try again."
-
 
 def get_student_id(current_user: dict) -> str:
     return str(
         current_user.get("student_id") or
         current_user.get("email")
     )
-
 
 def build_system_prompt(context: dict) -> str:
     return f"""
@@ -107,7 +102,6 @@ RESPONSE FORMAT:
 - For how-to: give numbered steps, max 4 steps
 """.strip()
 
-
 def handle_track_complaint(message: str, student_id: str) -> dict:
     match = re.search(r"(CMP-[A-Z0-9]+)", message.upper())
     context = {}
@@ -129,7 +123,6 @@ def handle_track_complaint(message: str, student_id: str) -> dict:
         context["recent_complaints"] = recent if recent else "No complaints filed yet"
     return context
 
-
 def handle_create_complaint(message: str, student_id: str, current_user: dict) -> dict:
     extract_prompt = f"""
 Extract complaint info from this student message: "{message}"
@@ -139,7 +132,7 @@ CATEGORY: <category name matching campus complaint types>
 PRIORITY: <Low|Medium|High|Emergency>
 SUMMARY: <one line description>
 """
-    raw = gemini(extract_prompt)
+    raw = groq_chat(extract_prompt)
 
     category, priority, summary = "Other", "Medium", message[:100]
     for line in raw.splitlines():
@@ -181,7 +174,6 @@ SUMMARY: <one line description>
         "complaint_created": True,
     }
 
-
 @router.post("/", response_model=ChatResponse)
 def chat(
     request: ChatRequest,
@@ -207,7 +199,7 @@ def chat(
             context["new_complaint_id"] = new_complaint_id
 
         system_prompt = build_system_prompt(context)
-        reply = gemini(f"{system_prompt}\n\nStudent message: {message}")
+        reply = groq_chat(f"{system_prompt}\n\nStudent message: {message}")
 
     except Exception as e:
         logger.error(f"Chatbot error for student {student_id}: {e}")
@@ -230,7 +222,6 @@ def chat(
         complaint_created=complaint_created,
         complaint_id=new_complaint_id,
     )
-
 
 @router.get("/history")
 def chat_history(
